@@ -1,6 +1,8 @@
-# FullWorkflow — Claude Code 一键式全流程开发 Skill
+# FullWorkflow Skill — AI Agent 一键式全流程开发
 
 一键完成从 brainstorming 到实现到验证的完整开发流程。自动判断复杂度并选择最优执行策略。
+
+适用于任何支持 subagent 编排的 AI 编程助手（Claude Code、Cursor、Windsurf 等）。
 
 ## 工作流程
 
@@ -21,22 +23,27 @@
 - **60% 红线** — 单个 subagent 预估上下文用量超过 60% → 自动拆分
 - **自动 Rework** — 验证失败自动派修复 subagent，无需人工干预
 - **渐进式披露** — subagent 按需读取 skill 文件，不一次性加载全部内容
+- **自包含** — 所有依赖内置，复制即可使用，无需联网安装
 
 ## 安装
 
-将 `skills/full-workflow` 目录复制到你的 Claude Code skills 目录：
+### Claude Code
 
 ```bash
 # macOS / Linux
 cp -r skills/full-workflow ~/.claude/skills/
 
-# Windows
+# Windows (PowerShell)
 Copy-Item -Recurse skills/full-workflow "$env:USERPROFILE\.claude\skills\"
 ```
 
-安装后在 Claude Code 中使用 `/full-workflow` 触发。
+安装后使用 `/full-workflow` 触发。
 
-## 使用
+### 其他 AI 编程助手
+
+将 `skills/full-workflow/SKILL.md` 配置为你所用工具的 skill/prompt 文件，根据工具的 subagent 机制适配调用方式。
+
+## 使用示例
 
 ```
 /full-workflow 我需要给项目添加用户认证功能
@@ -57,7 +64,7 @@ skills/full-workflow/
 ├── brainstorming-prompt.md           # Brainstorming subagent prompt
 ├── how-to-do-prompt.md               # 复杂度分析 subagent prompt
 ├── rework-prompt.md                  # Rework subagent prompt
-└── referenced-skills/                # 依赖的 superpowers skills
+└── referenced-skills/                # 内置依赖 skills
     ├── brainstorming/SKILL.md
     ├── writing-plans/SKILL.md
     ├── test-driven-development/SKILL.md
@@ -70,7 +77,7 @@ skills/full-workflow/
 
 ## 依赖
 
-内置了 [superpowers](https://github.com/obra/superpowers) 的以下 skills 作为 `referenced-skills/`，无需额外安装：
+内置了 [superpowers](https://github.com/obra/superpowers) 的以下 skills，无需额外安装：
 
 - brainstorming
 - writing-plans
@@ -84,7 +91,6 @@ skills/full-workflow/
 ## 致谢
 
 - 执行策略和 subagent 编排模式来自 [obra/superpowers](https://github.com/obra/superpowers)
-- 本项目是 superpowers 的下游封装，将多个独立 skill 编排为一个完整的全流程工作流
 
 ## License
 
