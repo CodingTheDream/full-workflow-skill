@@ -41,7 +41,7 @@ digraph full_workflow {
 
     "用户触发" -> "Phase 1: Brainstorming";
     "Phase 1: Brainstorming" -> "Phase 1.5: Spec Review";
-    "Phase 1.5: Spec Review" -> "Phase 1: Brainstorming" [label="NEEDS_REWORK (≤10)"];
+    "Phase 1.5: Spec Review" -> "Phase 1: Brainstorming" [label="NEEDS_REWORK (≤5, 3级升级)"];
     "Phase 1.5: Spec Review" -> "Phase 2: how-to-do" [label="PASS"];
 
     "Phase 2: how-to-do" -> "Phase 3A: TDD 直做" [label="简单"];
@@ -50,16 +50,16 @@ digraph full_workflow {
     "Phase 3A: TDD 直做" -> "Phase 4: Review + Verify";
 
     "Phase 3B1: Writing Plans" -> "Phase 3B1.5: Plan Review";
-    "Phase 3B1.5: Plan Review" -> "Phase 3B1: Writing Plans" [label="NEEDS_REWORK (≤10)"];
+    "Phase 3B1.5: Plan Review" -> "Phase 3B1: Writing Plans" [label="NEEDS_REWORK (≤5, 3级升级)"];
     "Phase 3B1.5: Plan Review" -> "Phase 3B2: how-to-do" [label="PASS"];
     "Phase 3B2: how-to-do" -> "Phase 3B3: 执行";
     "Phase 3B3: 执行" -> "Phase 4: Review + Verify";
 
     "Phase 4: Review + Verify" -> "全部通过?";
-    "全部通过?" -> "Phase 5: Rework" [label="否（≤10次）"];
+    "全部通过?" -> "Phase 5: Rework" [label="否（≤5次, 3级升级）"];
     "Phase 5: Rework" -> "Phase 4: Review + Verify";
     "全部通过?" -> "Phase 6: Documentation" [label="是"];
-    "全部通过?" -> "报告用户" [label="否（>10次）"];
+    "全部通过?" -> "Responsible Exit" [label="否（>5次）"];
     "Phase 6: Documentation" -> "完成";
 }
 ```
@@ -87,10 +87,19 @@ digraph full_workflow {
    - spec 文件路径
 3. 期望输出：`{ "verdict": "PASS" | "NEEDS_REWORK", "issues": [...], "recommendations": [...] }`
 
-**Re-work 循环（最多 10 次）：**
+**Re-work 循环（3 级升级策略，最多 5 轮）：**
 - `PASS` → 继续阶段 2
 - `NEEDS_REWORK` → 将 Reviewer 的 issues 反馈传给新的 Brainstorming subagent（重新派发阶段 1），产出修改后的 spec 后再次进入 Spec Review
-- 超过 10 次 → escalate 给用户
+- **策略升级：**
+  - 第 1-2 轮：正常 rework，Brainstorming subagent 按常规修改 spec
+  - 第 3-4 轮：Brainstorming subagent 必须**换方案**，不能重复前两轮的修改思路，并在返回中说明"换了什么方案、为什么之前的不行"
+  - 第 5+ 轮：触发 **Responsible Exit**（见下方）
+- **Responsible Exit：** 向用户提交结构化交接报告：
+  1. 已验证的事实（spec 中哪些部分已确认正确）
+  2. 卡住的具体问题（哪个业务规则/维度无法收敛）
+  3. 已尝试过的方案（避免用户重复）
+  4. 推荐的下一步方向
+  5. 等待用户指示
 
 ## 阶段 2: how-to-do（复杂度判断）
 
@@ -134,10 +143,13 @@ digraph full_workflow {
    - spec 文件路径
 3. 期望输出：`{ "verdict": "PASS" | "NEEDS_REWORK", "issues": [...], "recommendations": [...] }`
 
-**Re-work 循环（最多 10 次）：**
+**Re-work 循环（3 级升级策略，最多 5 轮）：**
 - `PASS` → 继续阶段 3B2
 - `NEEDS_REWORK` → 将 Reviewer 的 issues 反馈传给新的 Writing Plans subagent（重新派发阶段 3B1），产出修改后的 plan 后再次进入 Plan Review
-- 超过 10 次 → escalate 给用户
+- **策略升级：**
+  - 第 1-2 轮：正常 rework
+  - 第 3-4 轮：Writing Plans subagent 必须**换拆分方案**，不能只微调任务描述，并说明"换了什么思路"
+  - 第 5+ 轮：触发 **Responsible Exit**（同阶段 1.5 的结构化交接报告格式）
 
 ## 阶段 3B2: how-to-do（执行策略）
 
@@ -172,9 +184,10 @@ Code Review 和 Verification **并行执行**。
 
 1. 读取 prompt 模板：`verification-prompt.md`
 2. 用 `general-purpose` subagent 派发，传入：
+   - **spec/plan 路径**（用于业务规则覆盖验证）
    - 变更文件列表
    - 项目根目录
-3. 期望输出：`{ "passed": true | false, "issues": [...] }`
+3. 期望输出：`{ "passed": true | false, "issues": [...], "business_rules_coverage": {...} }`
 
 ## 阶段 5: Rework 循环
 
@@ -184,10 +197,16 @@ Code Review 和 Verification **并行执行**。
 
 **有 Critical 或 Important issues** → Rework：
 1. 读取 prompt 模板：`rework-prompt.md`
-2. 派 rework subagent，传入所有 issues 和变更文件列表
+2. 派 rework subagent，传入**当前状态摘要**（不是历史累积 issue 列表）和变更文件列表
 3. rework 完成后重新并行执行 Code Review + Verification（审查全部变更，不仅仅是 rework 的部分）
-4. **最多循环 10 次**
-5. 超过 10 次仍失败 → 向用户报告所有 issues，等待用户指示
+4. **3 级升级策略（最多 5 轮）：**
+   - 第 1-2 轮：正常 rework，按 issue 修复
+   - 第 3-4 轮：rework subagent 必须执行**深度检查清单**（见 rework-prompt.md），换方案修复
+   - 第 5+ 轮：触发 **Responsible Exit**，向用户提交结构化交接报告：
+     1. 已验证通过的部分
+     2. 仍存在的 Critical/Important issues 及已尝试的修复方案
+     3. 推荐的下一步方向（如：需要架构调整、需要用户澄清业务规则等）
+     4. 等待用户指示
 
 **只有 Minor issues** → 记录但不阻塞，继续阶段 6
 

@@ -71,6 +71,20 @@ Task tool (general-purpose):
     The controller can provide more context, re-dispatch with a more capable model,
     or break the task into smaller pieces.
 
+    ## 主动性标准
+
+    不要只做最低限度的工作。满足以下主动性要求：
+
+    | 被动行为（不要） | 主动行为（要做） |
+    | --- | --- |
+    | 只实现 task 里明确说的 | 实现后检查关联代码是否受影响 |
+    | 改完跑一下测试过了就算 | 改完还要想"这个改动可能在哪里出错"，主动测边界 |
+    | 发现疑问就停下来问 | 先自己查代码、查上下文，有结论后再说（真不确定的再问） |
+    | 改了 A 就只看 A | 改了 A 后检查 B、C 是否受影响 |
+    | 发现 task 描述有遗漏，跳过 | 发现遗漏时，按合理推断补全，并在报告中说明 |
+
+    **判断标准：** 如果一个有经验的人类开发者会想到要检查的，你也应该检查。
+
     ## Before Reporting Back: Self-Review
 
     Review your work with fresh eyes. Ask yourself:
